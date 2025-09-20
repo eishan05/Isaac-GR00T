@@ -1,4 +1,4 @@
-FROM superlinear/python-gpu:3.10-cuda12.4
+FROM aidockorg/python-cuda:3.10-v2-cuda-12.4.1-cudnn-devel-22.04
 ENV DEBIAN_FRONTEND=noninteractive
 # ENV PYTHONPATH="/app:${PYTHONPATH:-}"
 

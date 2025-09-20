@@ -1,18 +1,25 @@
 FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-devel
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONPATH=/workspace:${PYTHONPATH}
+ENV PYTHONPATH="/app:${PYTHONPATH:-}"
 
 # System dependencies
-RUN apt update && \
-    apt install -y tzdata && \
-    ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime && \
-    apt install -y netcat dnsutils && \
-    apt-get update && \
-    apt-get install -y libgl1-mesa-glx git libvulkan-dev \
-    zip unzip wget curl git git-lfs build-essential cmake \
-    vim less sudo htop ca-certificates man tmux ffmpeg tensorrt \
-    # Add OpenCV system dependencies
-    libglib2.0-0 libsm6 libxext6 libxrender-dev
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      tzdata ca-certificates \
+      netcat-openbsd dnsutils \
+      libgl1-mesa-glx libvulkan-dev \
+      zip unzip wget curl git git-lfs build-essential cmake \
+      vim less sudo htop man tmux ffmpeg \
+      libglib2.0-0 libsm6 libxext6 libxrender1 && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && dpkg-reconfigure -f noninteractive tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends wget gnupg ca-certificates && \
+    wget https://repo.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+    dpkg -i cuda-keyring_1.1-1_all.deb && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      libnvinfer10 libnvinfer-plugin10 libnvonnxparsers10 python3-libnvinfer && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip setuptools
 RUN pip install gpustat wandb==0.19.0

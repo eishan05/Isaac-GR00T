@@ -18,11 +18,8 @@ RUN pip install --upgrade pip setuptools
 
 # Create and set working directory
 WORKDIR /workspace
+COPY gr00t /workspace/gr00t
 # Copy pyproject.toml for dependencies
 COPY pyproject.toml .
 # Install dependencies from pyproject.toml
 RUN pip install -e .[base]
-
-COPY gr00t /workspace/gr00t
-COPY Makefile /workspace/Makefile
-RUN pip3 install -e .

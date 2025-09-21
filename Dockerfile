@@ -3,22 +3,23 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ENV PYTHONPATH="/app:${PYTHONPATH:-}"
 
 # System dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      tzdata ca-certificates \
-      netcat-openbsd dnsutils \
-      libgl1-mesa-glx libvulkan-dev \
-      zip unzip wget curl git git-lfs build-essential cmake \
-      vim less sudo htop man tmux ffmpeg \
-      libglib2.0-0 libsm6 libxext6 libxrender1 && \
-    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && dpkg-reconfigure -f noninteractive tzdata && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt update && \
+    apt install -y tzdata && \
+    ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime && \
+    apt install -y netcat dnsutils && \
+    apt-get update && \
+    apt-get install -y libgl1-mesa-glx git libvulkan-dev \
+    zip unzip wget curl git git-lfs build-essential cmake \
+    vim less sudo htop ca-certificates man tmux ffmpeg tensorrt \
+    # Add OpenCV system dependencies
+    libglib2.0-0 libsm6 libxext6 libxrender-dev
 
 RUN pip install --upgrade pip setuptools
 
 # Create and set working directory
 WORKDIR /workspace
 COPY gr00t /workspace/gr00t
+COPY scripts /workspace/scripts
 # Copy pyproject.toml for dependencies
 COPY pyproject.toml .
 # Install dependencies from pyproject.toml

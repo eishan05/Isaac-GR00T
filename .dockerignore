@@ -1,0 +1,31 @@
+# Speed up builds and reduce image size
+.git
+.github
+.gitmodules
+__pycache__
+*.pyc
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.vscode
+.idea
+.venv
+.env
+
+# Large or dev-only assets
+demo_data
+media
+docs
+site
+tests
+getting_started
+playground
+output
+tmp
+*.log
+*.log.*
+
+# OS/editor cruft
+.DS_Store
+*.swp
+

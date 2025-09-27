@@ -42,7 +42,14 @@ RUN conda run -n gr00t python -m pip install --upgrade pip setuptools && \
 # Expose the websocket port and default command to launch the server
 EXPOSE 8000
 
-CMD [ \
-  "conda", "run", "--no-capture-output", "-n", "gr00t", \
-  "python", "scripts/serve_gr00t_websocket.py", "--port", "8000" \
-]
+# Add ENV variables to mirror serve_gr00t_websocket.Args defaults
+ENV MODEL_PATH="nvidia/GR00T-N1.5-3B" \
+    EMBODIMENT_TAG="gr1" \
+    DATA_CONFIG="fourier_gr1_arms_waist" \
+    DENOISING_STEPS="4" \
+    HOST="0.0.0.0" \
+    PORT="8000" \
+    LOG_LEVEL="INFO"
+
+# Use a shell form to expand ENV vars and pass them as CLI args to the script
+CMD [ "bash", "-lc", "conda run --no-capture-output -n gr00t python scripts/serve_gr00t_websocket.py --model_path \"$MODEL_PATH\" --embodiment_tag \"$EMBODIMENT_TAG\" --data_config \"$DATA_CONFIG\" --denoising_steps \"$DENOISING_STEPS\" --host \"$HOST\" --port \"$PORT\" --log_level \"$LOG_LEVEL\""]

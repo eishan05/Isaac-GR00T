@@ -53,14 +53,14 @@ RUN python3 -m pip install --upgrade pip setuptools wheel && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-EXPOSE 8000
+EXPOSE 8080
 
 ENV MODEL_PATH="nvidia/GR00T-N1.5-3B" \
     EMBODIMENT_TAG="gr1" \
     DATA_CONFIG="fourier_gr1_arms_waist" \
     DENOISING_STEPS="4" \
     HOST="0.0.0.0" \
-    PORT="8000" \
+    PORT="8080" \
     LOG_LEVEL="INFO"
 
 CMD ["bash", "-lc", "python scripts/serve_gr00t_websocket.py --model_path \"$MODEL_PATH\" --embodiment_tag \"$EMBODIMENT_TAG\" --data_config \"$DATA_CONFIG\" --denoising_steps \"$DENOISING_STEPS\" --host \"$HOST\" --port \"$PORT\" --log_level \"$LOG_LEVEL\""]

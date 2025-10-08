@@ -1,0 +1,60 @@
+# Cloud Build configuration for building and pushing the Groot server image.
+# Use this with a Cloud Build trigger (recommended) instead of the default
+# Cloud Run "build from source" so you can control timeout and machine type.
+
+timeout: '3600s'  # Increase if your build still needs more time
+
+options:
+  # Bigger machine speeds up apt/uv installs significantly vs default e2-medium
+  machineType: 'E2_HIGHCPU_8'
+  # Increase disk if the image layers or dependency downloads are large
+  diskSizeGb: 200
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  # Adjust these to your Artifact Registry setup (repository must exist)
+  _REGION: us-central1
+  _REPOSITORY: cloud-run-gpu-images
+  _IMAGE_NAME: nvidia-groot-server-libero-image
+  _TAG: $SHORT_SHA
+  _SERVICE: nvidia-groot-server-libero
+
+steps:
+  - id: 'Build image'
+    name: 'gcr.io/cloud-builders/docker'
+    env: ['DOCKER_BUILDKIT=1']
+    args:
+      - build
+      - --pull
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}
+      - .
+
+  - id: 'Push image'
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}
+
+  - id: 'Deploy to Cloud Run'
+    name: 'gcr.io/cloud-builders/gcloud'
+    waitFor: ['Push image']
+    env: ['CLOUDSDK_CORE_DISABLE_PROMPTS=1']
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}
+      - --region=${_REGION}
+      - --platform=managed
+      - --revision-suffix=${_TAG}
+      - --port=8080
+      - --memory=16Gi
+      - --cpu=4
+      - --gpu=1
+      - --gpu-type=nvidia-l4
+      - --set-env-vars=MODEL_PATH=eishan05/gr00t-n1.5-libero-90-posttrain,DATA_CONFIG=examples.Libero.custom_data_config:LiberoDataConfig,DENOISING_STEPS=8,PORT=8080,EMBODIMENT_TAG=new_embodiment
+      - --quiet
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}

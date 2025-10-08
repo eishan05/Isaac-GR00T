@@ -48,7 +48,6 @@ steps:
       - --region=${_REGION}
       - --platform=managed
       - --revision-suffix=${_TAG}
-      - --port=8080
       - --memory=16Gi
       - --cpu=4
       - --gpu=1

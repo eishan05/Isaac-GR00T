@@ -52,6 +52,7 @@ steps:
       - --cpu=4
       - --gpu=1
       - --gpu-type=nvidia-l4
+      - --no-gpu-zonal-redundancy
       - --set-env-vars=MODEL_PATH=eishan05/gr00t-n1.5-libero-90-posttrain,DATA_CONFIG=examples.Libero.custom_data_config:LiberoDataConfig,DENOISING_STEPS=8,EMBODIMENT_TAG=new_embodiment
       - --quiet
 

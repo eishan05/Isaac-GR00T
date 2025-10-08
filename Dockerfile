@@ -1,48 +1,60 @@
-FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS flash-attn-builder
 
-# Avoid interactive tzdata prompts during build
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
     PYTHONUNBUFFERED=1
 
-# System dependencies (kept minimal). Build tools for flash-attn, and common runtime libs.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates curl git git-lfs \
-      build-essential cmake ninja-build \
-      ffmpeg libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 && \
+      python3 python3-pip python3-dev python3-venv \
+      build-essential cmake ninja-build git git-lfs curl && \
     rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp
+
+ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124
+
+RUN ln -sf /usr/bin/python3 /usr/bin/python && \
+    python3 -m pip install --upgrade pip setuptools wheel packaging ninja && \
+    python3 -m pip install torch==2.5.1 && \
+    python3 -m pip wheel --wheel-dir /tmp/wheels --no-deps flash-attn==2.7.1.post4 && \
+    rm -rf /root/.cache/pip
+
+
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      python3 python3-pip python3-venv python3-dev \
+      build-essential ca-certificates curl git git-lfs ffmpeg \
+      libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 && \
+    ln -sf /usr/bin/python3 /usr/local/bin/python
 
 WORKDIR /workspace/Isaac-GR00T
 
-# Install Miniforge (conda) to /opt/conda
-ENV CONDA_DIR=/opt/conda
-ENV PATH=${CONDA_DIR}/bin:${PATH}
-SHELL ["/bin/bash", "-lc"]
-RUN set -euxo pipefail && \
-    curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh && \
-    bash /tmp/miniforge.sh -b -p ${CONDA_DIR} && \
-    rm -f /tmp/miniforge.sh && \
-    conda config --system --set auto_update_conda false && \
-    conda clean -afy
+COPY --from=flash-attn-builder /tmp/wheels /opt/wheels
 
-# Create Python 3.10 environment named `gr00t`
-RUN conda create -y -n gr00t python=3.10 && conda clean -afy
-
-# Copy repo contents (assumes submodules like `roboactions` are present in the build context)
 COPY . .
 
-# Python dependencies inside the conda env (mirror the manual steps)
-RUN conda run -n gr00t python -m pip install --upgrade pip setuptools && \
-    conda run -n gr00t python -m pip install -e .[base] && \
-    conda run -n gr00t python -m pip install --no-build-isolation flash-attn==2.7.1.post4 && \
-    conda run -n gr00t python -m pip install -e ./roboactions && \
-    conda run -n gr00t python -m pip cache purge || true
+ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124
 
-# Expose the websocket port and default command to launch the server
+RUN python3 -m pip install --upgrade pip setuptools wheel && \
+    python3 -m pip install torch==2.5.1 torchvision==0.20.1 && \
+    python3 -m pip install -e .[base] && \
+    python3 -m pip install --no-index --find-links=/opt/wheels flash-attn==2.7.1.post4 && \
+    python3 -m pip install -e ./roboactions && \
+    rm -rf /opt/wheels && \
+    python3 -m pip cache purge || true && \
+    apt-get purge -y build-essential python3-dev && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8000
 
-# Add ENV variables to mirror serve_gr00t_websocket.Args defaults
 ENV MODEL_PATH="nvidia/GR00T-N1.5-3B" \
     EMBODIMENT_TAG="gr1" \
     DATA_CONFIG="fourier_gr1_arms_waist" \
@@ -51,5 +63,4 @@ ENV MODEL_PATH="nvidia/GR00T-N1.5-3B" \
     PORT="8000" \
     LOG_LEVEL="INFO"
 
-# Use a shell form to expand ENV vars and pass them as CLI args to the script
-CMD [ "bash", "-lc", "conda run --no-capture-output -n gr00t python scripts/serve_gr00t_websocket.py --model_path \"$MODEL_PATH\" --embodiment_tag \"$EMBODIMENT_TAG\" --data_config \"$DATA_CONFIG\" --denoising_steps \"$DENOISING_STEPS\" --host \"$HOST\" --port \"$PORT\" --log_level \"$LOG_LEVEL\""]
+CMD ["bash", "-lc", "python scripts/serve_gr00t_websocket.py --model_path \"$MODEL_PATH\" --embodiment_tag \"$EMBODIMENT_TAG\" --data_config \"$DATA_CONFIG\" --denoising_steps \"$DENOISING_STEPS\" --host \"$HOST\" --port \"$PORT\" --log_level \"$LOG_LEVEL\""]

@@ -47,6 +47,8 @@ RUN python3 -m pip install --upgrade pip setuptools wheel && \
     python3 -m pip install -e .[base] && \
     python3 -m pip install --no-index --find-links=/opt/wheels flash-attn==2.7.1.post4 && \
     python3 -m pip install -e ./roboactions && \
+    python3 -m pip install huggingface_hub && \
+    python3 -c "from huggingface_hub import snapshot_download; snapshot_download('eishan05/gr00t-n1.5-libero-90-posttrain')" && \
     rm -rf /opt/wheels && \
     python3 -m pip cache purge || true && \
     apt-get purge -y build-essential python3-dev && \
